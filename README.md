@@ -3,6 +3,9 @@
 Nexus Pedagógico Lab es una herramienta didáctica pensada para profesorados y espacios de formación docente.  
 Su objetivo es acompañar procesos de enseñanza y aprendizaje mediante una experiencia simple, clara y accesible, favoreciendo el uso pedagógico de la tecnología en el aula.
 
+<img width="1895" height="853" alt="image" src="https://github.com/user-attachments/assets/b3d875b8-cda6-4980-9e28-eddbaab0231f" />
+
+
 ## Descripción
 
 Este proyecto reúne un entorno educativo diseñado para explorar contenidos, organizar recursos y facilitar dinámicas de trabajo en contextos de formación docente.  
@@ -33,6 +36,8 @@ Nexus Pedagógico Lab puede utilizarse para:
 - realizar actividades guiadas,
 - explorar recursos educativos,
 - y promover el trabajo autónomo o colaborativo.
+
+<img width="1864" height="873" alt="image" src="https://github.com/user-attachments/assets/17913443-0567-4f4b-a39e-8a9646f7f137" />
 
 
 ## Demo en vivo
