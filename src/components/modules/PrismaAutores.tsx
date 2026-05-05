@@ -1,8 +1,29 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNexusStore } from "@/store/useNexusStore";
-import { getAuthorById, getCategoryColor, categories } from "@/data/authors";
-import { Eye, BookOpen, HelpCircle, ArrowLeft, ChevronLeft, ChevronRight, GraduationCap, Brain, Clock, MapPin, Quote, Target, Users } from "lucide-react";
+import { getAuthorById, getCategoryColor, categories, type CategoryId } from "@/data/authors";
+import { Eye, BookOpen, HelpCircle, ArrowLeft, ChevronLeft, ChevronRight, GraduationCap, Brain, Clock, Quote, Target, Users } from "lucide-react";
+
+// Category concept images
+import fundadoresImg from "@/assets/slides/fundadores-concept.jpg";
+import escuelaNuevaImg from "@/assets/slides/escuela-nueva-concept.jpg";
+import giroPsicologicoImg from "@/assets/slides/giro-psicologico-concept.jpg";
+import pedagogiaCriticaImg from "@/assets/slides/pedagogia-critica-concept.jpg";
+import contemporaneosImg from "@/assets/slides/contemporaneos-concept.jpg";
+
+// Slide type images
+import methodologyImg from "@/assets/slides/methodology.jpg";
+import transpositionImg from "@/assets/slides/transposition.jpg";
+import biographyImg from "@/assets/slides/biography.jpg";
+import connectionsImg from "@/assets/slides/connections.jpg";
+
+const categoryImages: Record<CategoryId, string> = {
+  fundadores: fundadoresImg,
+  "escuela-nueva": escuelaNuevaImg,
+  "giro-psicologico": giroPsicologicoImg,
+  "pedagogia-critica": pedagogiaCriticaImg,
+  contemporaneos: contemporaneosImg,
+};
 
 export default function PrismaAutores() {
   const { selectedAuthorId, selectedLens, setSelectedLens, setActiveModule, setQuizScore, duaProfiles } = useNexusStore();
@@ -23,6 +44,7 @@ export default function PrismaAutores() {
 
   const catColor = getCategoryColor(author.category);
   const category = categories.find(c => c.id === author.category);
+  const catImage = categoryImages[author.category];
 
   // Build enriched slides for Flash-PPT
   const enrichedSlides = [
@@ -31,42 +53,49 @@ export default function PrismaAutores() {
       title: author.name,
       subtitle: `${author.years} · ${category?.icon} ${category?.name}`,
       content: author.description,
+      image: author.portrait,
     },
     {
       type: "bio" as const,
-      title: "Biografía y Contexto",
+      title: "Biografía y Contexto Histórico",
       content: author.storytelling,
       icon: <Clock className="w-5 h-5" />,
+      image: biographyImg,
     },
     {
       type: "concepts" as const,
       title: "Conceptos Clave",
       items: author.keyConcepts,
       icon: <Brain className="w-5 h-5" />,
+      image: catImage,
     },
     {
       type: "methodology" as const,
       title: "Metodología",
       content: author.methodology,
       icon: <Target className="w-5 h-5" />,
+      image: methodologyImg,
     },
     ...author.slides.map(s => ({
       type: "content" as const,
       title: s.title,
       content: s.content,
       icon: <BookOpen className="w-5 h-5" />,
+      image: catImage,
     })),
     {
       type: "transposition" as const,
       title: "Transposición Didáctica",
       phases: author.transpositionPhases,
       icon: <GraduationCap className="w-5 h-5" />,
+      image: transpositionImg,
     },
     {
       type: "connections" as const,
       title: "Red de Influencias",
       connections: author.connections,
       icon: <Users className="w-5 h-5" />,
+      image: connectionsImg,
     },
   ];
 
@@ -96,9 +125,9 @@ export default function PrismaAutores() {
       case "cover":
         return (
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative">
-              <div className={`w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden ring-4 ring-${catColor}/20 shadow-xl`}>
-                <img src={author.portrait} alt={author.name} className="w-full h-full object-cover" />
+            <div className="relative flex-shrink-0">
+              <div className={`w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden ring-4 ring-${catColor}/20 shadow-xl`}>
+                <img src={author.portrait} alt={author.name} className="w-full h-full object-cover" loading="lazy" />
               </div>
               <span className={`absolute -bottom-2 -right-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-${catColor}/20 text-foreground border border-${catColor}/30`}>
                 {category?.icon} {category?.name}
@@ -121,49 +150,82 @@ export default function PrismaAutores() {
 
       case "bio":
         return (
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <img src={author.portrait} alt={author.name} className="w-20 h-20 rounded-xl object-cover flex-shrink-0 hidden sm:block" />
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Quote className="w-5 h-5 text-primary flex-shrink-0" />
-                  <h3 className="font-display font-semibold text-foreground text-lg">Historia de {author.name}</h3>
-                </div>
-                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{currentSlide.content}</p>
+          <div className="flex flex-col sm:flex-row gap-5">
+            <div className="sm:w-2/3 order-2 sm:order-1">
+              <div className="flex items-center gap-2 mb-3">
+                <Quote className="w-5 h-5 text-primary flex-shrink-0" />
+                <h3 className="font-display font-semibold text-foreground text-lg">Historia de {author.name}</h3>
               </div>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{currentSlide.content}</p>
+            </div>
+            <div className="sm:w-1/3 order-1 sm:order-2 flex-shrink-0">
+              <img
+                src={currentSlide.image}
+                alt="Contexto histórico"
+                className="w-full h-40 sm:h-full rounded-xl object-cover"
+                loading="lazy"
+                width={768}
+                height={512}
+              />
             </div>
           </div>
         );
 
       case "concepts":
         return (
-          <div className="space-y-3">
-            {currentSlide.items?.map((concept, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="flex gap-3 p-3 rounded-xl bg-accent/30 border border-accent"
-              >
-                <div className={`w-8 h-8 rounded-lg bg-${catColor}/10 flex items-center justify-center flex-shrink-0`}>
-                  <span className="text-xs font-bold text-foreground">{i + 1}</span>
-                </div>
-                <p className="text-sm text-foreground leading-relaxed">{concept}</p>
-              </motion.div>
-            ))}
+          <div className="flex flex-col sm:flex-row gap-5">
+            <div className="sm:w-2/3 space-y-2.5">
+              {currentSlide.items?.map((concept, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.08 }}
+                  className="flex gap-3 p-3 rounded-xl bg-accent/30 border border-accent"
+                >
+                  <div className={`w-7 h-7 rounded-lg bg-${catColor}/10 flex items-center justify-center flex-shrink-0`}>
+                    <span className="text-[11px] font-bold text-foreground">{i + 1}</span>
+                  </div>
+                  <p className="text-[13px] text-foreground leading-relaxed">{concept}</p>
+                </motion.div>
+              ))}
+            </div>
+            <div className="sm:w-1/3 flex-shrink-0 hidden sm:block">
+              <img
+                src={currentSlide.image}
+                alt="Conceptos clave"
+                className="w-full h-full rounded-xl object-cover max-h-80"
+                loading="lazy"
+                width={768}
+                height={512}
+              />
+            </div>
           </div>
         );
 
       case "methodology":
         return (
           <div className="space-y-4">
-            <div className={`p-6 rounded-2xl bg-gradient-to-br from-${catColor}/5 to-${catColor}/10 border border-${catColor}/20`}>
-              <div className="flex items-center gap-2 mb-3">
-                <Target className="w-5 h-5 text-primary" />
-                <h3 className="font-display font-semibold text-foreground">Enfoque Metodológico</h3>
+            <div className="flex flex-col sm:flex-row gap-5">
+              <div className="sm:w-3/5">
+                <div className={`p-5 rounded-2xl bg-gradient-to-br from-${catColor}/5 to-${catColor}/10 border border-${catColor}/20`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target className="w-5 h-5 text-primary" />
+                    <h3 className="font-display font-semibold text-foreground">Enfoque Metodológico</h3>
+                  </div>
+                  <p className="text-sm text-foreground leading-relaxed">{currentSlide.content}</p>
+                </div>
               </div>
-              <p className="text-sm text-foreground leading-relaxed">{currentSlide.content}</p>
+              <div className="sm:w-2/5 flex-shrink-0">
+                <img
+                  src={currentSlide.image}
+                  alt="Metodología"
+                  className="w-full h-48 sm:h-full rounded-xl object-cover"
+                  loading="lazy"
+                  width={768}
+                  height={512}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {author.keyConceptsShort.map((c, i) => (
@@ -181,6 +243,16 @@ export default function PrismaAutores() {
       case "transposition":
         return (
           <div className="space-y-4">
+            <div className="w-full h-32 rounded-xl overflow-hidden mb-2">
+              <img
+                src={currentSlide.image}
+                alt="Transposición didáctica"
+                className="w-full h-full object-cover"
+                loading="lazy"
+                width={768}
+                height={512}
+              />
+            </div>
             {(["inicio", "desarrollo", "cierre"] as const).map((phase, i) => {
               const colors = ["bg-cat-escuela-nueva/10 border-cat-escuela-nueva/20", "bg-primary/10 border-primary/20", "bg-cat-giro-psicologico/10 border-cat-giro-psicologico/20"];
               const icons = ["🚀", "⚙️", "🎯"];
@@ -209,6 +281,16 @@ export default function PrismaAutores() {
       case "connections":
         return (
           <div className="space-y-4">
+            <div className="w-full h-28 rounded-xl overflow-hidden">
+              <img
+                src={currentSlide.image}
+                alt="Red de influencias"
+                className="w-full h-full object-cover"
+                loading="lazy"
+                width={768}
+                height={512}
+              />
+            </div>
             <p className="text-sm text-muted-foreground">Autores que influenciaron o fueron influenciados por {author.name}:</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {currentSlide.connections?.map(connId => {
@@ -217,7 +299,7 @@ export default function PrismaAutores() {
                 const connCatColor = getCategoryColor(conn.category);
                 return (
                   <div key={connId} className={`p-3 rounded-xl border border-${connCatColor}/20 bg-${connCatColor}/5 text-center`}>
-                    <img src={conn.portrait} alt={conn.name} className="w-14 h-14 rounded-lg object-cover mx-auto mb-2" />
+                    <img src={conn.portrait} alt={conn.name} className="w-14 h-14 rounded-lg object-cover mx-auto mb-2" loading="lazy" />
                     <p className="text-xs font-semibold text-foreground">{conn.name}</p>
                     <p className="text-[10px] text-muted-foreground">{conn.years}</p>
                     <p className="text-[10px] text-muted-foreground mt-1">{conn.keyConceptsShort[0]}</p>
@@ -228,10 +310,22 @@ export default function PrismaAutores() {
           </div>
         );
 
-      default:
+      default: // "content" slides
         return (
-          <div className="space-y-3">
-            <p className="text-sm text-foreground leading-relaxed">{currentSlide.content}</p>
+          <div className="flex flex-col sm:flex-row gap-5">
+            <div className="sm:w-3/5 order-2 sm:order-1">
+              <p className="text-sm text-foreground leading-relaxed">{currentSlide.content}</p>
+            </div>
+            <div className="sm:w-2/5 order-1 sm:order-2 flex-shrink-0">
+              <img
+                src={currentSlide.image}
+                alt={currentSlide.title}
+                className="w-full h-36 sm:h-44 rounded-xl object-cover"
+                loading="lazy"
+                width={768}
+                height={512}
+              />
+            </div>
           </div>
         );
     }
@@ -329,7 +423,7 @@ export default function PrismaAutores() {
                     key={i}
                     onClick={() => setSlideIndex(i)}
                     className={`w-2.5 h-2.5 rounded-full transition-all flex-shrink-0 ${
-                      i === slideIndex ? `bg-primary scale-125` : "bg-muted hover:bg-muted-foreground/30"
+                      i === slideIndex ? "bg-primary scale-125" : "bg-muted hover:bg-muted-foreground/30"
                     }`}
                   />
                 ))}
@@ -351,7 +445,14 @@ export default function PrismaAutores() {
               <BookOpen className="w-5 h-5 text-cat-escuela-nueva" />
               Historia de {author.name}
             </h2>
-            <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{author.storytelling}</p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="sm:w-2/3">
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{author.storytelling}</p>
+              </div>
+              <div className="sm:w-1/3">
+                <img src={catImage} alt={`Contexto de ${author.name}`} className="w-full rounded-xl object-cover" loading="lazy" width={768} height={512} />
+              </div>
+            </div>
           </motion.div>
         )}
 
