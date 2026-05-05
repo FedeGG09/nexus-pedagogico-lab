@@ -40,6 +40,138 @@ export interface SynthesisResult {
   application: string;
 }
 
+// Dynamic synthesis generator for any combination
+export function getSynthesis(id1: string, id2: string): SynthesisResult | null {
+  const key1 = `${id1}-${id2}`;
+  const key2 = `${id2}-${id1}`;
+  if (synthesisMatrix[key1]) return synthesisMatrix[key1];
+  if (synthesisMatrix[key2]) return synthesisMatrix[key2];
+  
+  // Generate dynamic synthesis for any combination
+  const a1 = getAuthorById(id1);
+  const a2 = getAuthorById(id2);
+  if (!a1 || !a2 || id1 === id2) return null;
+
+  const cat1 = categories.find(c => c.id === a1.category);
+  const cat2 = categories.find(c => c.id === a2.category);
+
+  const dynamicSyntheses: Record<string, () => SynthesisResult> = {};
+  
+  // Generate based on category combinations
+  const catKey = [a1.category, a2.category].sort().join("+");
+  
+  const templates: Record<string, { titleFn: (n1: string, n2: string) => string; descFn: (a: Author, b: Author) => string; appFn: (a: Author, b: Author) => string }> = {
+    "fundadores+escuela-nueva": {
+      titleFn: (n1, n2) => `Puente Clásico-Activo: ${n1} × ${n2}`,
+      descFn: (a, b) => `Los principios fundacionales de ${a.name} (${a.keyConceptsShort[0]}) se activan con las técnicas de ${b.name} (${b.keyConceptsShort[0]}): la teoría clásica cobra vida a través de la metodología activa.`,
+      appFn: (a, b) => `Diseñar una secuencia donde los principios de ${a.keyConceptsShort[0]} se implementen usando ${b.keyConceptsShort[1]} como estrategia práctica.`,
+    },
+    "fundadores+giro-psicologico": {
+      titleFn: (n1, n2) => `Fundamento Cognitivo: ${n1} × ${n2}`,
+      descFn: (a, b) => `La visión pedagógica de ${a.name} se enriquece con la comprensión psicológica de ${b.name}: los ideales educativos clásicos se calibran según los procesos cognitivos del aprendiz.`,
+      appFn: (a, b) => `Reinterpretar ${a.keyConceptsShort[0]} a la luz de ${b.keyConceptsShort[0]} para crear actividades calibradas al desarrollo cognitivo.`,
+    },
+    "fundadores+pedagogia-critica": {
+      titleFn: (n1, n2) => `Tradición Liberadora: ${n1} × ${n2}`,
+      descFn: (a, b) => `Los cimientos universalistas de ${a.name} se politizan con la mirada crítica de ${b.name}: enseñar a todos, pero con conciencia de las desigualdades.`,
+      appFn: (a, b) => `Aplicar ${a.keyConceptsShort[0]} en contextos de vulnerabilidad social usando ${b.keyConceptsShort[0]} como lente de análisis.`,
+    },
+    "fundadores+contemporaneos": {
+      titleFn: (n1, n2) => `Clásico Reinventado: ${n1} × ${n2}`,
+      descFn: (a, b) => `Los principios atemporales de ${a.name} se reinventan con las perspectivas contemporáneas de ${b.name}: lo clásico se vuelve innovador.`,
+      appFn: (a, b) => `Actualizar ${a.keyConceptsShort[0]} integrando ${b.keyConceptsShort[0]} para diseñar experiencias del Siglo XXI.`,
+    },
+    "escuela-nueva+giro-psicologico": {
+      titleFn: (n1, n2) => `Activismo Cognitivo: ${n1} × ${n2}`,
+      descFn: (a, b) => `Las técnicas activas de ${a.name} se fundamentan en la ciencia cognitiva de ${b.name}: hacer con sentido psicológico.`,
+      appFn: (a, b) => `Diseñar actividades de ${a.keyConceptsShort[1]} calibradas según ${b.keyConceptsShort[0]} del estudiante.`,
+    },
+    "escuela-nueva+pedagogia-critica": {
+      titleFn: (n1, n2) => `Escuela Activa y Crítica: ${n1} × ${n2}`,
+      descFn: (a, b) => `La metodología activa de ${a.name} se orienta hacia la transformación social de ${b.name}: hacer para cambiar.`,
+      appFn: (a, b) => `Proyectos de ${a.keyConceptsShort[0]} enfocados en problemas de justicia social usando ${b.keyConceptsShort[0]}.`,
+    },
+    "escuela-nueva+contemporaneos": {
+      titleFn: (n1, n2) => `Innovación Activa: ${n1} × ${n2}`,
+      descFn: (a, b) => `Las técnicas de ${a.name} se potencian con la visión contemporánea de ${b.name}: la escuela activa del siglo XXI.`,
+      appFn: (a, b) => `Integrar ${a.keyConceptsShort[0]} con ${b.keyConceptsShort[0]} en proyectos interdisciplinarios modernos.`,
+    },
+    "giro-psicologico+pedagogia-critica": {
+      titleFn: (n1, n2) => `Cognición Crítica: ${n1} × ${n2}`,
+      descFn: (a, b) => `La comprensión cognitiva de ${a.name} ilumina la pedagogía crítica de ${b.name}: entender cómo pensamos para transformar cómo vivimos.`,
+      appFn: (a, b) => `Usar ${a.keyConceptsShort[0]} para diseñar experiencias de ${b.keyConceptsShort[0]} con fundamentación psicológica.`,
+    },
+    "giro-psicologico+contemporaneos": {
+      titleFn: (n1, n2) => `Psicología Innovadora: ${n1} × ${n2}`,
+      descFn: (a, b) => `Los hallazgos de ${a.name} sobre la mente se aplican en los enfoques contemporáneos de ${b.name}: ciencia cognitiva al servicio de la innovación educativa.`,
+      appFn: (a, b) => `Fundamentar ${b.keyConceptsShort[0]} en los principios de ${a.keyConceptsShort[0]} para intervenciones más efectivas.`,
+    },
+    "contemporaneos+pedagogia-critica": {
+      titleFn: (n1, n2) => `Innovación Transformadora: ${n1} × ${n2}`,
+      descFn: (a, b) => `La innovación de ${a.name} se pone al servicio de la transformación social de ${b.name}: crear para liberar.`,
+      appFn: (a, b) => `Proyectos de ${a.keyConceptsShort[0]} orientados a la ${b.keyConceptsShort[0]} y el cambio social.`,
+    },
+  };
+
+  // Same category
+  const sameCatTemplates: Record<string, { titleFn: (n1: string, n2: string) => string; descFn: (a: Author, b: Author) => string; appFn: (a: Author, b: Author) => string }> = {
+    "fundadores": {
+      titleFn: (n1, n2) => `Diálogo Fundacional: ${n1} × ${n2}`,
+      descFn: (a, b) => `Dos pilares de la pedagogía se complementan: ${a.keyConceptsShort[0]} de ${a.name} se articula con ${b.keyConceptsShort[0]} de ${b.name} para una visión integral de los orígenes educativos.`,
+      appFn: (a, b) => `Comparar y sintetizar los aportes de ambos fundadores en una línea de tiempo dialógica.`,
+    },
+    "escuela-nueva": {
+      titleFn: (n1, n2) => `Sinergia Activa: ${n1} × ${n2}`,
+      descFn: (a, b) => `Dos enfoques activos se potencian: ${a.keyConceptsShort[0]} se enriquece con ${b.keyConceptsShort[0]} para una escuela doblemente transformadora.`,
+      appFn: (a, b) => `Diseñar una jornada escolar que combine las técnicas de ambos pedagogos.`,
+    },
+    "giro-psicologico": {
+      titleFn: (n1, n2) => `Convergencia Cognitiva: ${n1} × ${n2}`,
+      descFn: (a, b) => `Las teorías de ${a.name} y ${b.name} se complementan: ${a.keyConceptsShort[0]} dialoga con ${b.keyConceptsShort[0]} para una comprensión más completa del aprendiz.`,
+      appFn: (a, b) => `Diseñar actividades que integren ambas perspectivas psicológicas sobre el aprendizaje.`,
+    },
+    "pedagogia-critica": {
+      titleFn: (n1, n2) => `Doble Crítica: ${n1} × ${n2}`,
+      descFn: (a, b) => `La visión de ${a.name} (${a.keyConceptsShort[0]}) se articula con la de ${b.name} (${b.keyConceptsShort[0]}): dos formas de cuestionar y transformar la educación.`,
+      appFn: (a, b) => `Analizar un problema educativo desde ambas perspectivas críticas y proponer soluciones integradoras.`,
+    },
+    "contemporaneos": {
+      titleFn: (n1, n2) => `Futuro Pedagógico: ${n1} × ${n2}`,
+      descFn: (a, b) => `Las propuestas de ${a.name} y ${b.name} se fusionan: ${a.keyConceptsShort[0]} se multiplica con ${b.keyConceptsShort[0]} para una educación del futuro.`,
+      appFn: (a, b) => `Crear un proyecto educativo innovador que integre ambas visiones contemporáneas.`,
+    },
+  };
+
+  let template;
+  if (a1.category === a2.category) {
+    template = sameCatTemplates[a1.category];
+  } else {
+    template = templates[catKey];
+  }
+
+  if (!template) {
+    // Fallback generic
+    return {
+      key: key1,
+      title: `Cruce Pedagógico: ${a1.name} × ${a2.name}`,
+      description: `${a1.keyConceptsShort[0]} de ${a1.name} (${cat1?.name}) se combina con ${a2.keyConceptsShort[0]} de ${a2.name} (${cat2?.name}): una síntesis que invita a repensar la práctica docente desde dos tradiciones distintas.`,
+      application: `Diseñar una actividad que integre los principios de ${a1.name} con la metodología de ${a2.name}.`,
+    };
+  }
+
+  // Determine order: first author's category comes first alphabetically in catKey
+  const sorted = [a1.category, a2.category].sort();
+  const first = sorted[0] === a1.category ? a1 : a2;
+  const second = first === a1 ? a2 : a1;
+
+  return {
+    key: key1,
+    title: template.titleFn(first.name, second.name),
+    description: template.descFn(first, second),
+    application: template.appFn(first, second),
+  };
+}
+
 export const synthesisMatrix: Record<string, SynthesisResult> = {
   "freire-montessori": {
     key: "freire-montessori",

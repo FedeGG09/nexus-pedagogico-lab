@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNexusStore } from "@/store/useNexusStore";
-import { getAuthorById } from "@/data/authors";
-import { Eye, BookOpen, HelpCircle, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { getAuthorById, getCategoryColor, categories } from "@/data/authors";
+import { Eye, BookOpen, HelpCircle, ArrowLeft, ChevronLeft, ChevronRight, GraduationCap, Brain, Clock, MapPin, Quote, Target, Users } from "lucide-react";
 
 export default function PrismaAutores() {
   const { selectedAuthorId, selectedLens, setSelectedLens, setActiveModule, setQuizScore, duaProfiles } = useNexusStore();
@@ -20,6 +20,57 @@ export default function PrismaAutores() {
       </div>
     );
   }
+
+  const catColor = getCategoryColor(author.category);
+  const category = categories.find(c => c.id === author.category);
+
+  // Build enriched slides for Flash-PPT
+  const enrichedSlides = [
+    {
+      type: "cover" as const,
+      title: author.name,
+      subtitle: `${author.years} · ${category?.icon} ${category?.name}`,
+      content: author.description,
+    },
+    {
+      type: "bio" as const,
+      title: "Biografía y Contexto",
+      content: author.storytelling,
+      icon: <Clock className="w-5 h-5" />,
+    },
+    {
+      type: "concepts" as const,
+      title: "Conceptos Clave",
+      items: author.keyConcepts,
+      icon: <Brain className="w-5 h-5" />,
+    },
+    {
+      type: "methodology" as const,
+      title: "Metodología",
+      content: author.methodology,
+      icon: <Target className="w-5 h-5" />,
+    },
+    ...author.slides.map(s => ({
+      type: "content" as const,
+      title: s.title,
+      content: s.content,
+      icon: <BookOpen className="w-5 h-5" />,
+    })),
+    {
+      type: "transposition" as const,
+      title: "Transposición Didáctica",
+      phases: author.transpositionPhases,
+      icon: <GraduationCap className="w-5 h-5" />,
+    },
+    {
+      type: "connections" as const,
+      title: "Red de Influencias",
+      connections: author.connections,
+      icon: <Users className="w-5 h-5" />,
+    },
+  ];
+
+  const currentSlide = enrichedSlides[slideIndex];
 
   const lenses = [
     { id: "visual" as const, label: "Flash-PPT", icon: <Eye className="w-4 h-4" />, color: "text-primary" },
@@ -40,6 +91,152 @@ export default function PrismaAutores() {
     setQuizScore(author.id, score);
   };
 
+  const renderSlideContent = () => {
+    switch (currentSlide.type) {
+      case "cover":
+        return (
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="relative">
+              <div className={`w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden ring-4 ring-${catColor}/20 shadow-xl`}>
+                <img src={author.portrait} alt={author.name} className="w-full h-full object-cover" />
+              </div>
+              <span className={`absolute -bottom-2 -right-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-${catColor}/20 text-foreground border border-${catColor}/30`}>
+                {category?.icon} {category?.name}
+              </span>
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <h2 className="font-display text-3xl font-bold text-foreground">{currentSlide.title}</h2>
+              <p className="text-sm text-muted-foreground mt-1">{currentSlide.subtitle}</p>
+              <p className="text-sm text-foreground mt-4 leading-relaxed">{currentSlide.content}</p>
+              <div className="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start">
+                {author.keyConceptsShort.map((c, i) => (
+                  <span key={i} className={`text-xs px-3 py-1 rounded-full bg-${catColor}/10 text-foreground font-medium border border-${catColor}/20`}>
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case "bio":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-start gap-4">
+              <img src={author.portrait} alt={author.name} className="w-20 h-20 rounded-xl object-cover flex-shrink-0 hidden sm:block" />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Quote className="w-5 h-5 text-primary flex-shrink-0" />
+                  <h3 className="font-display font-semibold text-foreground text-lg">Historia de {author.name}</h3>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{currentSlide.content}</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "concepts":
+        return (
+          <div className="space-y-3">
+            {currentSlide.items?.map((concept, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="flex gap-3 p-3 rounded-xl bg-accent/30 border border-accent"
+              >
+                <div className={`w-8 h-8 rounded-lg bg-${catColor}/10 flex items-center justify-center flex-shrink-0`}>
+                  <span className="text-xs font-bold text-foreground">{i + 1}</span>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">{concept}</p>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case "methodology":
+        return (
+          <div className="space-y-4">
+            <div className={`p-6 rounded-2xl bg-gradient-to-br from-${catColor}/5 to-${catColor}/10 border border-${catColor}/20`}>
+              <div className="flex items-center gap-2 mb-3">
+                <Target className="w-5 h-5 text-primary" />
+                <h3 className="font-display font-semibold text-foreground">Enfoque Metodológico</h3>
+              </div>
+              <p className="text-sm text-foreground leading-relaxed">{currentSlide.content}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {author.keyConceptsShort.map((c, i) => (
+                <div key={i} className="text-center p-3 rounded-xl bg-card border border-border">
+                  <div className={`w-10 h-10 rounded-full bg-${catColor}/10 mx-auto flex items-center justify-center mb-2`}>
+                    <Brain className="w-4 h-4 text-foreground" />
+                  </div>
+                  <p className="text-[11px] font-medium text-foreground">{c}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "transposition":
+        return (
+          <div className="space-y-4">
+            {(["inicio", "desarrollo", "cierre"] as const).map((phase, i) => {
+              const colors = ["bg-cat-escuela-nueva/10 border-cat-escuela-nueva/20", "bg-primary/10 border-primary/20", "bg-cat-giro-psicologico/10 border-cat-giro-psicologico/20"];
+              const icons = ["🚀", "⚙️", "🎯"];
+              const labels = ["Inicio", "Desarrollo", "Cierre"];
+              return (
+                <motion.div
+                  key={phase}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.15 }}
+                  className={`p-4 rounded-xl border ${colors[i]}`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">{icons[i]}</span>
+                    <h4 className="text-sm font-semibold text-foreground">{labels[i]}</h4>
+                  </div>
+                  <p className="text-xs text-foreground leading-relaxed">
+                    {currentSlide.phases?.[phase]}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        );
+
+      case "connections":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Autores que influenciaron o fueron influenciados por {author.name}:</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {currentSlide.connections?.map(connId => {
+                const conn = getAuthorById(connId);
+                if (!conn) return null;
+                const connCatColor = getCategoryColor(conn.category);
+                return (
+                  <div key={connId} className={`p-3 rounded-xl border border-${connCatColor}/20 bg-${connCatColor}/5 text-center`}>
+                    <img src={conn.portrait} alt={conn.name} className="w-14 h-14 rounded-lg object-cover mx-auto mb-2" />
+                    <p className="text-xs font-semibold text-foreground">{conn.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{conn.years}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{conn.keyConceptsShort[0]}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="space-y-3">
+            <p className="text-sm text-foreground leading-relaxed">{currentSlide.content}</p>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6">
       <button
@@ -58,7 +255,7 @@ export default function PrismaAutores() {
         </div>
       </motion.div>
 
-      {/* Key concepts */}
+      {/* Key concepts for altas capacidades */}
       {isAltasCapacidades && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-surface rounded-lg p-4">
           <h3 className="font-display font-semibold text-sm text-foreground mb-2">🔬 Investigación Profunda</h3>
@@ -100,31 +297,47 @@ export default function PrismaAutores() {
       {/* Lens content */}
       <AnimatePresence mode="wait">
         {selectedLens === "visual" && (
-          <motion.div key="visual" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="glass-surface rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-foreground">
-                {author.slides[slideIndex].title}
-              </h2>
-              <span className="text-xs text-muted-foreground">{slideIndex + 1}/{author.slides.length}</span>
+          <motion.div key="visual" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+            {/* Slide content */}
+            <div className="glass-surface rounded-2xl p-6 min-h-[320px]">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  {'icon' in currentSlide && currentSlide.icon}
+                  <h2 className="font-display font-semibold text-foreground text-lg">
+                    {currentSlide.title}
+                  </h2>
+                </div>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full bg-${catColor}/10 text-foreground`}>
+                  {slideIndex + 1}/{enrichedSlides.length}
+                </span>
+              </div>
+              {renderSlideContent()}
             </div>
-            <p className="text-sm text-foreground leading-relaxed">{author.slides[slideIndex].content}</p>
-            <div className="flex items-center justify-between mt-6">
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between">
               <button
                 disabled={slideIndex === 0}
                 onClick={() => setSlideIndex((i) => i - 1)}
-                className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-30 transition-colors"
+                className="p-2.5 rounded-xl border border-border hover:bg-muted disabled:opacity-30 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <div className="flex gap-1">
-                {author.slides.map((_, i) => (
-                  <div key={i} className={`w-2 h-2 rounded-full transition-colors ${i === slideIndex ? "bg-primary" : "bg-muted"}`} />
+              <div className="flex gap-1.5 overflow-x-auto max-w-[70%] py-1">
+                {enrichedSlides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSlideIndex(i)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all flex-shrink-0 ${
+                      i === slideIndex ? `bg-primary scale-125` : "bg-muted hover:bg-muted-foreground/30"
+                    }`}
+                  />
                 ))}
               </div>
               <button
-                disabled={slideIndex === author.slides.length - 1}
+                disabled={slideIndex === enrichedSlides.length - 1}
                 onClick={() => setSlideIndex((i) => i + 1)}
-                className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-30 transition-colors"
+                className="p-2.5 rounded-xl border border-border hover:bg-muted disabled:opacity-30 transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
