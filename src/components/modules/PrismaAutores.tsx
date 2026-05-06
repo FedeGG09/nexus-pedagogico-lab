@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNexusStore } from "@/store/useNexusStore";
 import { getAuthorById, getCategoryColor, categories, type CategoryId } from "@/data/authors";
-import { Eye, BookOpen, HelpCircle, ArrowLeft, ChevronLeft, ChevronRight, GraduationCap, Brain, Clock, Quote, Target, Users } from "lucide-react";
+import { Eye, BookOpen, HelpCircle, ArrowLeft, ChevronLeft, ChevronRight, GraduationCap, Brain, Clock, Quote, Target, Users, Download, FileText, Loader2, MapPin, BookMarked } from "lucide-react";
 
 // Category concept images
 import fundadoresImg from "@/assets/slides/fundadores-concept.jpg";
@@ -25,6 +25,25 @@ const categoryImages: Record<CategoryId, string> = {
   contemporaneos: contemporaneosImg,
 };
 
+// DUA-aware alt text generator
+function getAltText(
+  baseAlt: string,
+  duaProfiles: string[],
+  context?: string
+): string {
+  let alt = baseAlt;
+  if (duaProfiles.includes("visual")) {
+    alt += `. Descripción detallada: ${context || "Imagen educativa relacionada con la pedagogía"}`;
+  }
+  if (duaProfiles.includes("tdah")) {
+    alt += " [Imagen de apoyo visual]";
+  }
+  if (duaProfiles.includes("altas-capacidades") && context) {
+    alt += `. Conexión académica: ${context}`;
+  }
+  return alt;
+}
+
 export default function PrismaAutores() {
   const { selectedAuthorId, selectedLens, setSelectedLens, setActiveModule, setQuizScore, duaProfiles } = useNexusStore();
   const author = selectedAuthorId ? getAuthorById(selectedAuthorId) : null;
@@ -32,6 +51,8 @@ export default function PrismaAutores() {
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState<(number | null)[]>([]);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const slideRef = useRef<HTMLDivElement>(null);
   const isAltasCapacidades = duaProfiles.includes("altas-capacidades");
 
   if (!author) {
@@ -46,7 +67,7 @@ export default function PrismaAutores() {
   const category = categories.find(c => c.id === author.category);
   const catImage = categoryImages[author.category];
 
-  // Build enriched slides for Flash-PPT
+  // Build enriched slides for Flash-PPT with all author info
   const enrichedSlides = [
     {
       type: "cover" as const,
@@ -63,6 +84,13 @@ export default function PrismaAutores() {
       image: biographyImg,
     },
     {
+      type: "contexto" as const,
+      title: "Contexto Histórico y Origen",
+      content: author.contextoHistorico,
+      icon: <MapPin className="w-5 h-5" />,
+      image: biographyImg,
+    },
+    {
       type: "concepts" as const,
       title: "Conceptos Clave",
       items: author.keyConcepts,
@@ -76,6 +104,20 @@ export default function PrismaAutores() {
       icon: <Target className="w-5 h-5" />,
       image: methodologyImg,
     },
+    {
+      type: "obras" as const,
+      title: "Obras Principales",
+      items: author.obras,
+      icon: <BookMarked className="w-5 h-5" />,
+      image: catImage,
+    },
+    {
+      type: "citas" as const,
+      title: "Citas Célebres",
+      items: author.citas,
+      icon: <Quote className="w-5 h-5" />,
+      image: catImage,
+    },
     ...author.slides.map(s => ({
       type: "content" as const,
       title: s.title,
@@ -83,6 +125,13 @@ export default function PrismaAutores() {
       icon: <BookOpen className="w-5 h-5" />,
       image: catImage,
     })),
+    {
+      type: "aportes" as const,
+      title: "Aportes a la Educación Actual",
+      content: author.aportesActuales,
+      icon: <GraduationCap className="w-5 h-5" />,
+      image: catImage,
+    },
     {
       type: "transposition" as const,
       title: "Transposición Didáctica",
@@ -120,6 +169,59 @@ export default function PrismaAutores() {
     setQuizScore(author.id, score);
   };
 
+  // PDF Export
+  const exportToPDF = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const { default: html2canvas } = await import("html2canvas");
+
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const savedIndex = slideIndex;
+
+      for (let i = 0; i < enrichedSlides.length; i++) {
+        setSlideIndex(i);
+        // Wait for render
+        await new Promise(r => setTimeout(r, 300));
+
+        if (slideRef.current) {
+          const canvas = await html2canvas(slideRef.current, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#1a1a2e",
+          });
+
+          const imgData = canvas.toDataURL("image/jpeg", 0.92);
+          const imgRatio = canvas.width / canvas.height;
+          let imgW = pageWidth - 10;
+          let imgH = imgW / imgRatio;
+
+          if (imgH > pageHeight - 10) {
+            imgH = pageHeight - 10;
+            imgW = imgH * imgRatio;
+          }
+
+          const x = (pageWidth - imgW) / 2;
+          const y = (pageHeight - imgH) / 2;
+
+          if (i > 0) pdf.addPage();
+          pdf.addImage(imgData, "JPEG", x, y, imgW, imgH);
+        }
+      }
+
+      pdf.save(`Flash-PPT_${author.name.replace(/\s+/g, "_")}.pdf`);
+      setSlideIndex(savedIndex);
+    } catch (err) {
+      console.error("Error exporting PDF:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [slideIndex, enrichedSlides.length, author?.name]);
+
   const renderSlideContent = () => {
     switch (currentSlide.type) {
       case "cover":
@@ -127,7 +229,12 @@ export default function PrismaAutores() {
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="relative flex-shrink-0">
               <div className={`w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden ring-4 ring-${catColor}/20 shadow-xl`}>
-                <img src={author.portrait} alt={author.name} className="w-full h-full object-cover" loading="lazy" />
+                <img
+                  src={author.portrait}
+                  alt={getAltText(`Retrato de ${author.name} (${author.years})`, duaProfiles, `Pedagogo de la corriente ${category?.name}, ${author.paisOrigen}`)}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
               </div>
               <span className={`absolute -bottom-2 -right-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-${catColor}/20 text-foreground border border-${catColor}/30`}>
                 {category?.icon} {category?.name}
@@ -136,8 +243,10 @@ export default function PrismaAutores() {
             <div className="flex-1 text-center sm:text-left">
               <h2 className="font-display text-3xl font-bold text-foreground">{currentSlide.title}</h2>
               <p className="text-sm text-muted-foreground mt-1">{currentSlide.subtitle}</p>
-              <p className="text-sm text-foreground mt-4 leading-relaxed">{currentSlide.content}</p>
-              <div className="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start">
+              <p className="text-xs text-muted-foreground mt-0.5">📍 {author.paisOrigen}</p>
+              <p className="text-sm text-foreground mt-3 leading-relaxed">{currentSlide.content}</p>
+              <p className="text-xs text-muted-foreground mt-2 italic">{author.enfoqueResumido}</p>
+              <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                 {author.keyConceptsShort.map((c, i) => (
                   <span key={i} className={`text-xs px-3 py-1 rounded-full bg-${catColor}/10 text-foreground font-medium border border-${catColor}/20`}>
                     {c}
@@ -161,7 +270,34 @@ export default function PrismaAutores() {
             <div className="sm:w-1/3 order-1 sm:order-2 flex-shrink-0">
               <img
                 src={currentSlide.image}
-                alt="Contexto histórico"
+                alt={getAltText(`Contexto histórico de ${author.name}`, duaProfiles, `Ilustración del período ${author.years} en ${author.paisOrigen}`)}
+                className="w-full h-40 sm:h-full rounded-xl object-cover"
+                loading="lazy"
+                width={768}
+                height={512}
+              />
+            </div>
+          </div>
+        );
+
+      case "contexto":
+        return (
+          <div className="flex flex-col sm:flex-row gap-5">
+            <div className="sm:w-2/3">
+              <div className="flex items-center gap-2 mb-3">
+                <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
+                <h3 className="font-display font-semibold text-foreground text-lg">Contexto Histórico</h3>
+              </div>
+              <div className={`p-4 rounded-xl bg-${catColor}/5 border border-${catColor}/20 mb-3`}>
+                <p className="text-xs font-medium text-muted-foreground mb-1">📍 Origen</p>
+                <p className="text-sm text-foreground font-medium">{author.paisOrigen}</p>
+              </div>
+              <p className="text-sm text-foreground leading-relaxed">{currentSlide.content}</p>
+            </div>
+            <div className="sm:w-1/3 flex-shrink-0">
+              <img
+                src={currentSlide.image}
+                alt={getAltText(`Mapa conceptual del contexto de ${author.name}`, duaProfiles, `${author.paisOrigen}, ${author.years}`)}
                 className="w-full h-40 sm:h-full rounded-xl object-cover"
                 loading="lazy"
                 width={768}
@@ -193,7 +329,7 @@ export default function PrismaAutores() {
             <div className="sm:w-1/3 flex-shrink-0 hidden sm:block">
               <img
                 src={currentSlide.image}
-                alt="Conceptos clave"
+                alt={getAltText(`Conceptos clave de ${author.name}: ${author.keyConceptsShort.join(", ")}`, duaProfiles, `Diagrama visual de los ${author.keyConcepts.length} conceptos fundamentales`)}
                 className="w-full h-full rounded-xl object-cover max-h-80"
                 loading="lazy"
                 width={768}
@@ -219,7 +355,7 @@ export default function PrismaAutores() {
               <div className="sm:w-2/5 flex-shrink-0">
                 <img
                   src={currentSlide.image}
-                  alt="Metodología"
+                  alt={getAltText(`Metodología de ${author.name}`, duaProfiles, `Representación visual del enfoque: ${author.enfoqueResumido}`)}
                   className="w-full h-48 sm:h-full rounded-xl object-cover"
                   loading="lazy"
                   width={768}
@@ -240,13 +376,91 @@ export default function PrismaAutores() {
           </div>
         );
 
+      case "obras":
+        return (
+          <div className="flex flex-col sm:flex-row gap-5">
+            <div className="sm:w-2/3 space-y-2.5">
+              {currentSlide.items?.map((obra, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.08 }}
+                  className={`flex gap-3 p-3 rounded-xl bg-${catColor}/5 border border-${catColor}/15`}
+                >
+                  <div className={`w-7 h-7 rounded-lg bg-${catColor}/10 flex items-center justify-center flex-shrink-0`}>
+                    <BookMarked className="w-3.5 h-3.5 text-foreground" />
+                  </div>
+                  <p className="text-[13px] text-foreground leading-relaxed">{obra}</p>
+                </motion.div>
+              ))}
+            </div>
+            <div className="sm:w-1/3 flex-shrink-0 hidden sm:block">
+              <img
+                src={currentSlide.image}
+                alt={getAltText(`Obras principales de ${author.name}`, duaProfiles, `Bibliografía destacada: ${author.obras[0]}`)}
+                className="w-full h-full rounded-xl object-cover max-h-80"
+                loading="lazy"
+                width={768}
+                height={512}
+              />
+            </div>
+          </div>
+        );
+
+      case "citas":
+        return (
+          <div className="space-y-4">
+            {currentSlide.items?.map((cita, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.12 }}
+                className={`p-5 rounded-2xl bg-gradient-to-br from-${catColor}/5 to-${catColor}/10 border border-${catColor}/20`}
+              >
+                <div className="flex gap-3">
+                  <Quote className={`w-6 h-6 text-${catColor} flex-shrink-0 mt-0.5`} />
+                  <p className="text-sm text-foreground italic leading-relaxed">"{cita}"</p>
+                </div>
+                <p className="text-[11px] text-muted-foreground text-right mt-2">— {author.name}</p>
+              </motion.div>
+            ))}
+          </div>
+        );
+
+      case "aportes":
+        return (
+          <div className="flex flex-col sm:flex-row gap-5">
+            <div className="sm:w-3/5">
+              <div className={`p-5 rounded-2xl bg-gradient-to-br from-${catColor}/5 to-${catColor}/10 border border-${catColor}/20`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <GraduationCap className="w-5 h-5 text-primary" />
+                  <h3 className="font-display font-semibold text-foreground">Vigencia en el Siglo XXI</h3>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">{currentSlide.content}</p>
+              </div>
+            </div>
+            <div className="sm:w-2/5 flex-shrink-0">
+              <img
+                src={currentSlide.image}
+                alt={getAltText(`Aportes actuales de ${author.name} a la educación`, duaProfiles, `Aplicaciones contemporáneas de ${author.keyConceptsShort[0]}`)}
+                className="w-full h-48 sm:h-full rounded-xl object-cover"
+                loading="lazy"
+                width={768}
+                height={512}
+              />
+            </div>
+          </div>
+        );
+
       case "transposition":
         return (
           <div className="space-y-4">
             <div className="w-full h-32 rounded-xl overflow-hidden mb-2">
               <img
                 src={currentSlide.image}
-                alt="Transposición didáctica"
+                alt={getAltText(`Transposición didáctica de ${author.name}`, duaProfiles, `Secuencia de tres fases: Inicio, Desarrollo y Cierre basadas en ${author.enfoqueResumido}`)}
                 className="w-full h-full object-cover"
                 loading="lazy"
                 width={768}
@@ -284,7 +498,7 @@ export default function PrismaAutores() {
             <div className="w-full h-28 rounded-xl overflow-hidden">
               <img
                 src={currentSlide.image}
-                alt="Red de influencias"
+                alt={getAltText(`Red de influencias de ${author.name}`, duaProfiles, `Conexiones pedagógicas con ${currentSlide.connections?.length} autores relacionados`)}
                 className="w-full h-full object-cover"
                 loading="lazy"
                 width={768}
@@ -299,7 +513,12 @@ export default function PrismaAutores() {
                 const connCatColor = getCategoryColor(conn.category);
                 return (
                   <div key={connId} className={`p-3 rounded-xl border border-${connCatColor}/20 bg-${connCatColor}/5 text-center`}>
-                    <img src={conn.portrait} alt={conn.name} className="w-14 h-14 rounded-lg object-cover mx-auto mb-2" loading="lazy" />
+                    <img
+                      src={conn.portrait}
+                      alt={getAltText(`Retrato de ${conn.name}`, duaProfiles, `${conn.years}, corriente ${categories.find(c => c.id === conn.category)?.name}`)}
+                      className="w-14 h-14 rounded-lg object-cover mx-auto mb-2"
+                      loading="lazy"
+                    />
                     <p className="text-xs font-semibold text-foreground">{conn.name}</p>
                     <p className="text-[10px] text-muted-foreground">{conn.years}</p>
                     <p className="text-[10px] text-muted-foreground mt-1">{conn.keyConceptsShort[0]}</p>
@@ -319,7 +538,7 @@ export default function PrismaAutores() {
             <div className="sm:w-2/5 order-1 sm:order-2 flex-shrink-0">
               <img
                 src={currentSlide.image}
-                alt={currentSlide.title}
+                alt={getAltText(currentSlide.title, duaProfiles, `Slide sobre ${author.name}: ${currentSlide.title}`)}
                 className="w-full h-36 sm:h-44 rounded-xl object-cover"
                 loading="lazy"
                 width={768}
@@ -342,10 +561,17 @@ export default function PrismaAutores() {
 
       {/* Author header */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4">
-        <img src={author.portrait} alt={author.name} className="w-16 h-16 rounded-lg object-cover" width={64} height={64} />
+        <img
+          src={author.portrait}
+          alt={getAltText(`Retrato de ${author.name}`, duaProfiles, `Pedagogo ${author.paisOrigen}, ${author.years}`)}
+          className="w-16 h-16 rounded-lg object-cover"
+          width={64}
+          height={64}
+        />
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">{author.name}</h1>
           <p className="text-sm text-muted-foreground">{author.years} · {author.description}</p>
+          <p className="text-xs text-muted-foreground">📍 {author.paisOrigen}</p>
         </div>
       </motion.div>
 
@@ -361,6 +587,7 @@ export default function PrismaAutores() {
             ))}
           </ul>
           <p className="text-xs text-muted-foreground mt-3 italic">Metodología: {author.methodology}</p>
+          <p className="text-xs text-muted-foreground mt-1 italic">Enfoque: {author.enfoqueResumido}</p>
         </motion.div>
       )}
 
@@ -393,7 +620,7 @@ export default function PrismaAutores() {
         {selectedLens === "visual" && (
           <motion.div key="visual" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
             {/* Slide content */}
-            <div className="glass-surface rounded-2xl p-6 min-h-[320px]">
+            <div ref={slideRef} className="glass-surface rounded-2xl p-6 min-h-[320px]">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   {'icon' in currentSlide && currentSlide.icon}
@@ -408,7 +635,7 @@ export default function PrismaAutores() {
               {renderSlideContent()}
             </div>
 
-            {/* Navigation */}
+            {/* Navigation + Export */}
             <div className="flex items-center justify-between">
               <button
                 disabled={slideIndex === 0}
@@ -417,16 +644,31 @@ export default function PrismaAutores() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <div className="flex gap-1.5 overflow-x-auto max-w-[70%] py-1">
-                {enrichedSlides.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSlideIndex(i)}
-                    className={`w-2.5 h-2.5 rounded-full transition-all flex-shrink-0 ${
-                      i === slideIndex ? "bg-primary scale-125" : "bg-muted hover:bg-muted-foreground/30"
-                    }`}
-                  />
-                ))}
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5 overflow-x-auto max-w-[50%] py-1">
+                  {enrichedSlides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSlideIndex(i)}
+                      className={`w-2.5 h-2.5 rounded-full transition-all flex-shrink-0 ${
+                        i === slideIndex ? "bg-primary scale-125" : "bg-muted hover:bg-muted-foreground/30"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={exportToPDF}
+                  disabled={isExporting}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                  title="Exportar todas las slides a PDF"
+                >
+                  {isExporting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  {isExporting ? "Exportando..." : "PDF"}
+                </button>
               </div>
               <button
                 disabled={slideIndex === enrichedSlides.length - 1}
@@ -448,9 +690,20 @@ export default function PrismaAutores() {
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="sm:w-2/3">
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{author.storytelling}</p>
+                <div className="mt-4 p-3 rounded-xl bg-accent/30 border border-accent">
+                  <p className="text-xs text-muted-foreground italic">"{author.citas[0]}"</p>
+                  <p className="text-[10px] text-muted-foreground text-right mt-1">— {author.name}</p>
+                </div>
               </div>
               <div className="sm:w-1/3">
-                <img src={catImage} alt={`Contexto de ${author.name}`} className="w-full rounded-xl object-cover" loading="lazy" width={768} height={512} />
+                <img
+                  src={catImage}
+                  alt={getAltText(`Contexto de ${author.name}`, duaProfiles, `Corriente ${category?.name}: ${author.enfoqueResumido}`)}
+                  className="w-full rounded-xl object-cover"
+                  loading="lazy"
+                  width={768}
+                  height={512}
+                />
               </div>
             </div>
           </motion.div>
