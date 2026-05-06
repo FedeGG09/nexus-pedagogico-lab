@@ -16,6 +16,12 @@ export interface Author {
   slides: { title: string; content: string }[];
   transpositionPhases: { inicio: string; desarrollo: string; cierre: string };
   connections: string[];
+  obras: string[];
+  citas: string[];
+  contextoHistorico: string;
+  aportesActuales: string;
+  paisOrigen: string;
+  enfoqueResumido: string;
 }
 
 export interface Category {
