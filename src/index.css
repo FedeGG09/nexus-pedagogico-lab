@@ -97,28 +97,151 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  /* DUA: TDAH mode */
+  /* ======================================
+     DUA: TDAH mode
+     - Kill ALL animations & transitions
+     - Muted palette to reduce visual noise
+     - Larger spacing, calmer colors
+     - Focus indicators on interactive elements
+     ====================================== */
   .dua-tdah {
-    --dua-font-scale: 1.05;
-    --dua-spacing: 1.2;
+    --dua-font-scale: 1.1;
+    --dua-spacing: 1.4;
+    --background: 45 15% 96%;
+    --card: 45 10% 98%;
+    --accent: 45 20% 92%;
+    --accent-foreground: 220 20% 30%;
+    --muted: 45 10% 90%;
+    --border: 45 15% 82%;
+    --primary: 230 50% 50%;
   }
   .dua-tdah * {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
+    animation: none !important;
+  }
+  .dua-tdah img {
+    border-radius: 8px;
+    outline: 2px solid hsl(230 50% 50% / 0.3);
+  }
+  .dua-tdah button:focus-visible,
+  .dua-tdah a:focus-visible {
+    outline: 3px solid hsl(230 65% 52%);
+    outline-offset: 2px;
+  }
+  .dua-tdah .glass-surface {
+    backdrop-filter: none !important;
+    background: hsl(var(--card)) !important;
+  }
+  .dua-tdah p,
+  .dua-tdah span,
+  .dua-tdah li {
+    line-height: 1.8 !important;
+    letter-spacing: 0.02em;
+  }
+  .dua-tdah h1, .dua-tdah h2, .dua-tdah h3 {
+    border-bottom: 3px solid hsl(var(--primary) / 0.3);
+    padding-bottom: 0.4em;
   }
 
-  /* DUA: Visual Disability */
+  /* ======================================
+     DUA: Visual Disability
+     - Maximum contrast (near-black on white)
+     - Large fonts, thick borders
+     - High-visibility focus rings
+     - Underlined links, bold text
+     ====================================== */
   .dua-visual {
-    --dua-font-scale: 1.25;
-    --dua-contrast: 1.4;
-    --foreground: 220 30% 5%;
-    --primary: 230 80% 40%;
-    --border: 220 20% 60%;
+    --dua-font-scale: 1.35;
+    --dua-contrast: 1.6;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3%;
+    --primary: 230 90% 35%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 25%;
+    --border: 0 0% 40%;
+    --accent: 230 70% 92%;
+    --accent-foreground: 230 90% 20%;
+  }
+  .dua-visual * {
+    border-width: 2px !important;
+    font-weight: 600;
+  }
+  .dua-visual h1, .dua-visual h2, .dua-visual h3 {
+    font-weight: 800 !important;
+    text-decoration: underline;
+    text-decoration-color: hsl(230 90% 35%);
+    text-underline-offset: 4px;
+  }
+  .dua-visual p, .dua-visual span, .dua-visual li {
+    line-height: 2 !important;
+    letter-spacing: 0.03em;
+  }
+  .dua-visual a {
+    text-decoration: underline !important;
+    text-decoration-thickness: 2px !important;
+  }
+  .dua-visual img {
+    outline: 3px solid hsl(0 0% 3%);
+    border-radius: 4px;
+  }
+  .dua-visual button:focus-visible,
+  .dua-visual a:focus-visible {
+    outline: 4px solid hsl(0 0% 3%);
+    outline-offset: 3px;
+  }
+  .dua-visual button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .dua-visual .glass-surface {
+    backdrop-filter: none !important;
+    background: hsl(0 0% 100%) !important;
+    border: 3px solid hsl(0 0% 3%) !important;
   }
 
-  /* DUA: High Abilities */
+  /* ======================================
+     DUA: High Abilities
+     - Denser layout, smaller but sharp type
+     - Richer color palette (more saturation)
+     - Visible data hierarchy, academic feel
+     - Extra borders and section dividers
+     ====================================== */
   .dua-altas-capacidades {
-    --dua-font-scale: 0.95;
+    --dua-font-scale: 0.92;
+    --background: 225 25% 7%;
+    --foreground: 210 40% 93%;
+    --card: 225 22% 11%;
+    --card-foreground: 210 40% 93%;
+    --primary: 270 70% 65%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 225 15% 18%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 270 40% 18%;
+    --accent-foreground: 270 70% 80%;
+    --border: 225 15% 22%;
+  }
+  .dua-altas-capacidades p,
+  .dua-altas-capacidades span,
+  .dua-altas-capacidades li {
+    line-height: 1.5 !important;
+  }
+  .dua-altas-capacidades h1,
+  .dua-altas-capacidades h2,
+  .dua-altas-capacidades h3 {
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .dua-altas-capacidades .glass-surface {
+    background: hsl(225 22% 11% / 0.9) !important;
+    border: 1px solid hsl(270 70% 65% / 0.2) !important;
+  }
+  .dua-altas-capacidades img {
+    border-radius: 4px;
+    outline: 1px solid hsl(270 70% 65% / 0.3);
   }
 }
 
