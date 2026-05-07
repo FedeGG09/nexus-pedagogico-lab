@@ -366,15 +366,12 @@ export default function MatrizSintesis() {
           const isSelected = matrizAuthor1 === a.id || matrizAuthor2 === a.id;
           const catColor = getCategoryColor(a.category);
           return (
-            <motion.div
+            <div
               key={a.id}
-              variants={itemVariants}
               draggable
-              onDragStart={(e: React.DragEvent) => handleDragStart(e, a.id)}
+              onDragStart={(e) => handleDragStart(e, a.id)}
               onClick={() => handleTapAuthor(a.id)}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-grab active:cursor-grabbing transition-all select-none ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-grab active:cursor-grabbing transition-all select-none hover:scale-[1.03] active:scale-[0.97] ${
                 isSelected
                   ? `border-${catColor} bg-${catColor}/10 ring-1 ring-${catColor}/30 shadow-md`
                   : "border-border bg-card hover:border-primary/30 hover:shadow-sm"
@@ -385,7 +382,7 @@ export default function MatrizSintesis() {
                 <span className="text-xs font-medium text-foreground leading-tight">{a.name}</span>
                 <span className="text-[9px] text-muted-foreground leading-tight">{a.years}</span>
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </motion.div>
