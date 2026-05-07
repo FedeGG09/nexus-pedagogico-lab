@@ -370,7 +370,7 @@ export default function MatrizSintesis() {
               key={a.id}
               variants={itemVariants}
               draggable
-              onDragStart={(e) => handleDragStart(e, a.id)}
+              onDragStart={(e: React.DragEvent) => handleDragStart(e, a.id)}
               onClick={() => handleTapAuthor(a.id)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
